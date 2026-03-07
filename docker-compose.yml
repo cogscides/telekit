@@ -1,0 +1,21 @@
+services:
+  telekit:
+    container_name: telekit
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      API_ID: ${API_ID}
+      API_HASH: ${API_HASH}
+      TELEKIT_TRANSCRIPTION_MODEL: ${TELEKIT_TRANSCRIPTION_MODEL:-whisper-1}
+      TELEKIT_DATA_DIR: /app/data
+      TELEKIT_CLIENTS_FILE: /app/data/clients.json
+      TELEKIT_SESSIONS_DIR: /app/data/sessions
+      TELEKIT_JOBS_DIR: /app/jobs
+    volumes:
+      - ./data:/app/data
+      - ./jobs:/app/jobs
