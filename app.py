@@ -15,6 +15,7 @@ from telekit_config import (
     SUPPORTED_TRANSCRIPTION_MODELS,
     ensure_runtime_paths,
     load_settings,
+    validate_session_name,
     validate_startup_settings,
 )
 
@@ -34,8 +35,16 @@ def load_client_data(*, root_dir: Path | None = None) -> tuple[list[dict], objec
     with settings.clients_file.open("r", encoding="utf-8") as handle:
         try:
             data = json.load(handle)
-        except json.JSONDecodeError:
-            data = []
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Malformed client registry: {settings.clients_file}. "
+                "Fix or replace the file before continuing."
+            ) from exc
+    if not isinstance(data, list):
+        raise ValueError(
+            f"Malformed client registry: {settings.clients_file}. "
+            "Expected a JSON list of client definitions."
+        )
     return data, settings
 
 
@@ -57,6 +66,10 @@ def add_client(session: str):
     Register a Telegram session name inside data/clients.json.
     """
     client_data, settings = load_client_data()
+    session = validate_session_name(session)
+    if any(client.get("session_name") == session for client in client_data):
+        typer.echo(f"Session '{session}' is already registered.", err=True)
+        raise typer.Exit(code=2)
     new_client = default_client_config(session)
     client_data.append(new_client)
     save_client_data(client_data, settings=settings)

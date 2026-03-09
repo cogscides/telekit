@@ -118,15 +118,36 @@ class VoiceJobTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_model_resolution_prefers_env_then_falls_back(self):
         message = SimpleNamespace(voice=True)
-        handler = DummyClientHandler("/tmp/sample.ogg")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            handler = DummyClientHandler(os.path.join(tmpdir, "sample.ogg"))
 
-        with patch.dict(os.environ, {"TELEKIT_TRANSCRIPTION_MODEL": "gpt-4o-transcribe"}, clear=False):
-            job = VoiceJob(handler, message)
-            self.assertEqual("gpt-4o-transcribe", job._model)
+            with patch.dict(os.environ, {"TELEKIT_TRANSCRIPTION_MODEL": "gpt-4o-transcribe"}, clear=False):
+                job = VoiceJob(handler, message)
+                self.assertEqual("gpt-4o-transcribe", job._model)
 
-        with patch.dict(os.environ, {"TELEKIT_TRANSCRIPTION_MODEL": "not-a-real-model"}, clear=False):
-            job = VoiceJob(handler, message)
-            self.assertEqual(VoiceJob.DEFAULT_MODEL, job._model)
+            with patch.dict(os.environ, {"TELEKIT_TRANSCRIPTION_MODEL": "not-a-real-model"}, clear=False):
+                job = VoiceJob(handler, message)
+                self.assertEqual(VoiceJob.DEFAULT_MODEL, job._model)
+
+    async def test_small_audio_path_uses_converted_mp3(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_path = os.path.join(tmpdir, "sample.ogg")
+            converted_path = os.path.join(tmpdir, "sample.mp3")
+            for path in (original_path, converted_path):
+                with open(path, "wb") as handle:
+                    handle.write(b"test")
+
+            handler = DummyClientHandler(original_path)
+            message = SimpleNamespace(voice=True)
+            job = VoiceJob(handler, message, model="gpt-4o-mini-transcribe")
+            mock_transcribe = AsyncMock(return_value={"text": "done"})
+
+            with patch("job_manager.voice_job.AudioHelper.convert_media_to_mp3", AsyncMock(return_value=converted_path)), \
+                patch("job_manager.voice_job.AudioHelper.get_size_mb", AsyncMock(return_value=1)), \
+                patch("job_manager.voice_job.openai.Audio.atranscribe", mock_transcribe):
+                await job.process_job()
+
+            self.assertEqual(converted_path, mock_transcribe.await_args.args[1].name)
 
 
 class ClientHandlerTranscriptTests(unittest.IsolatedAsyncioTestCase):
@@ -190,7 +211,7 @@ class IngTranscribeCommandTests(unittest.IsolatedAsyncioTestCase):
             mock_voice_job.return_value.process_job = AsyncMock(return_value=fake_result)
             await command.handle_voice_message()
 
-        assert mock_voice_job.call_args.kwargs["model"] == "gpt-4o-mini-transcribe"
+        self.assertEqual(mock_voice_job.call_args.kwargs["model"], "gpt-4o-mini-transcribe")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,9 @@ def test_load_settings_uses_local_relative_paths(tmp_path, monkeypatch):
     monkeypatch.delenv("TELEKIT_DATA_DIR", raising=False)
     monkeypatch.delenv("TELEKIT_CLIENTS_FILE", raising=False)
     monkeypatch.delenv("TELEKIT_SESSIONS_DIR", raising=False)
+    monkeypatch.delenv("TELEKIT_SESSION_DIR", raising=False)
     monkeypatch.delenv("TELEKIT_JOBS_DIR", raising=False)
+    monkeypatch.delenv("TELEKIT_TRANSCRIPTION_MODEL", raising=False)
 
     settings = load_settings()
 
@@ -57,6 +59,7 @@ def test_validate_startup_settings_reports_missing_env(tmp_path, monkeypatch):
     monkeypatch.delenv("API_ID", raising=False)
     monkeypatch.delenv("API_HASH", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("TELEKIT_TRANSCRIPTION_MODEL", raising=False)
 
     errors = validate_startup_settings(load_settings())
 
@@ -78,3 +81,35 @@ def test_client_factory_uses_configured_sessions_directory(tmp_path, monkeypatch
     assert handler.client.session_path == str((tmp_path / "data" / "sessions" / "demo.session").resolve())
     assert handler.client.api_id == "123"
     assert handler.client.api_hash == "hash"
+
+
+def test_client_factory_rejects_invalid_session_name(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("API_ID", "123")
+    monkeypatch.setenv("API_HASH", "hash")
+
+    try:
+        ClientFactory.create_client(
+            {"session_name": "../escape", "commands": ["IngGPTCommand"]},
+            settings=load_settings(),
+        )
+    except ValueError as exc:
+        assert "Invalid session name" in str(exc)
+    else:
+        raise AssertionError("Expected invalid session name to be rejected")
+
+
+def test_client_factory_rejects_unknown_command(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("API_ID", "123")
+    monkeypatch.setenv("API_HASH", "hash")
+
+    try:
+        ClientFactory.create_client(
+            {"session_name": "demo", "commands": ["NopeCommand"]},
+            settings=load_settings(),
+        )
+    except ValueError as exc:
+        assert "Unknown command" in str(exc)
+    else:
+        raise AssertionError("Expected unknown commands to be rejected")

@@ -12,6 +12,7 @@ from pathlib import Path
 import logging
 
 from telekit_config import Settings, load_settings
+from telekit_config import validate_session_name
 
 ING_TRANSCRIBE_COMMAND_NAME = "@ingTranscribe"
 COMMAND_MODULES = {
@@ -414,17 +415,30 @@ class ClientFactory():
         sessions_location_directory = settings.sessions_dir
         api_id = settings.api_id
         api_hash = settings.api_hash
-        session_name = client_data.get("session_name")
+        session_name = validate_session_name(client_data.get("session_name"))
+        command_objects = [_resolve_command(command) for command in client_data['commands']]
         session_path = Path(sessions_location_directory) / f"{session_name}.session"
         client = TelegramClient(str(session_path), api_id, api_hash)
 
-        command_objects = [_resolve_command(command) for command in client_data['commands']]
         handler = ClientHandler(client, command_objects, settings=settings, session_name=session_name)
 
         return handler
 
 
 def _resolve_command(command_name: str):
+    if command_name not in COMMAND_MODULES:
+        supported = ", ".join(sorted(COMMAND_MODULES))
+        raise ValueError(
+            f"Unknown command '{command_name}' in configuration. Supported commands: {supported}"
+        )
+
     module_name, attribute_name = COMMAND_MODULES[command_name]
-    module = importlib.import_module(module_name)
-    return getattr(module, attribute_name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as exc:
+        raise ImportError(f"Could not import module '{module_name}' for command '{command_name}'.") from exc
+
+    try:
+        return getattr(module, attribute_name)
+    except AttributeError as exc:
+        raise ImportError(f"Could not load '{attribute_name}' from module '{module_name}'.") from exc

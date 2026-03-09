@@ -43,12 +43,48 @@ You need all of the following regardless of installation path:
 
 You should also know that Telekit stores Telegram session files on disk. Those files let Telekit sign back into your account without asking for login information every time.
 
+## Beginner Setup
+
+If you do not already have a Python development environment, start here before running any Telekit commands.
+
+### Windows
+
+1. Install Python 3.12 from <https://www.python.org/downloads/windows/> and make sure the installer option to add Python to `PATH` is enabled.
+2. Install Git from <https://git-scm.com/download/win> if you want to clone the repository. If not, download the project ZIP from GitHub and extract it.
+3. Open `PowerShell` in the Telekit folder.
+
+### macOS
+
+1. Install Python 3.12 from <https://www.python.org/downloads/macos/> or with Homebrew.
+2. Install Git with Xcode Command Line Tools: `xcode-select --install`, or download the project ZIP from GitHub if you do not want to use Git.
+3. Open `Terminal` in the Telekit folder.
+
+### Linux
+
+1. Install Python 3.12 and Git with your package manager, or download the project ZIP from GitHub and extract it manually.
+2. Open your terminal in the Telekit folder.
+
+### If you do not want to use Git
+
+You can still run Telekit:
+
+1. Open the GitHub repository page.
+2. Download the project as a ZIP archive.
+3. Extract it to a folder you control.
+4. Open a terminal in that extracted folder before running the commands below.
+
 ## Configuration
 
 Copy the example file first:
 
 ```bash
 cp .env.example .env
+```
+
+On Windows PowerShell, use:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
 Then fill in the required values:
@@ -59,7 +95,7 @@ Then fill in the required values:
 
 The current runtime also supports these optional settings:
 
-- `TELEKIT_TRANSCRIPTION_MODEL`: default transcription model. Planned supported values are `whisper-1`, `gpt-4o-transcribe`, and `gpt-4o-mini-transcribe`.
+- `TELEKIT_TRANSCRIPTION_MODEL`: default transcription model. Supported values are `whisper-1`, `gpt-4o-transcribe`, and `gpt-4o-mini-transcribe`.
 - `TELEKIT_DATA_DIR`: override the base runtime data directory.
 - `TELEKIT_CLIENTS_FILE`: override the path to `clients.json`.
 - `TELEKIT_SESSIONS_DIR`: override where Telegram session files are stored.
@@ -69,6 +105,13 @@ For compatibility, Telekit also accepts the older singular alias `TELEKIT_SESSIO
 
 If you do not need to change model or path behavior, leave the `TELEKIT_*` values at their defaults.
 
+### Safe `.env` editing
+
+- Edit `.env` with a plain text editor such as VS Code, TextEdit in plain-text mode, Notepad, or nano.
+- Do not commit `.env` to Git. It contains secrets.
+- Keep the values on one line each in `KEY=value` format.
+- If you copy the file to a server, restrict access to the account that runs Telekit.
+
 ## Local Developer Workflow
 
 The supported local flow is:
@@ -77,6 +120,14 @@ The supported local flow is:
 uv sync
 uv run telekit --help
 ```
+
+If `uv` is not installed yet, install it first:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+On Windows, see <https://docs.astral.sh/uv/getting-started/installation/>.
 
 The legacy entrypoint still works inside the synced environment:
 
@@ -117,6 +168,19 @@ docker exec -it telekit python /app/app.py start-program
 During the first login, Telekit will ask for Telegram authentication details in the terminal. After the session file is created, Telekit can reuse it on later starts.
 
 Note: Telekit does not currently expose an HTTP interface. If you see old examples with published ports, treat those as legacy deployment leftovers rather than a required part of setup.
+
+## Beginner Troubleshooting
+
+- `uv: command not found`
+  Install `uv` first, then restart your shell.
+- `python: command not found` or `python3: command not found`
+  Python is not installed correctly or is not on your shell `PATH`. Reinstall Python 3.10 through 3.12 and reopen the terminal.
+- `Configuration error: API_ID`
+  Your `.env` file is missing one or more required credentials.
+- Telekit asks for phone and login code every time
+  Your session file was not saved in `data/sessions`, or the session is not authorized yet.
+- `ModuleNotFoundError`
+  You likely skipped `uv sync` or are using `python app.py ...` outside the project environment.
 
 ## CLI Help
 

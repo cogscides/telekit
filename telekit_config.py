@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import os
+import re
 
 from dotenv import load_dotenv
 
@@ -14,6 +15,7 @@ SUPPORTED_TRANSCRIPTION_MODELS = (
     "gpt-4o-transcribe",
     "gpt-4o-mini-transcribe",
 )
+SESSION_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 @dataclass(frozen=True)
@@ -96,6 +98,19 @@ def validate_startup_settings(settings: Settings) -> list[str]:
             + ", ".join(SUPPORTED_TRANSCRIPTION_MODELS)
         )
     return missing
+
+
+def validate_session_name(session_name: str | None) -> str:
+    if not session_name:
+        raise ValueError("Session name cannot be empty.")
+    if Path(session_name).name != session_name or Path(session_name).is_absolute():
+        raise ValueError(f"Invalid session name: {session_name!r}")
+    if not SESSION_NAME_PATTERN.fullmatch(session_name):
+        raise ValueError(
+            "Invalid session name: "
+            f"{session_name!r}. Use only letters, numbers, hyphens, and underscores."
+        )
+    return session_name
 
 
 def _resolve_path(value: str | Path, root_dir: Path) -> Path:

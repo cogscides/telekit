@@ -58,7 +58,7 @@ class VoiceJob(BaseJob):
             logger.info("Audio file is too large (%s MB), splitting into smaller segments", size)
             return await self.transcribe_chunks(converted_media_path)
 
-        return await self.transcribe(self.get_file_path())
+        return await self.transcribe(converted_media_path)
 
     async def transcribe_chunks(self, file_path) -> TranscriptionResult:
         audio_chunks = AudioHelper.split_audio(file_path, self.get_chunk_directory())

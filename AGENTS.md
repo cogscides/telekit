@@ -25,7 +25,7 @@ Run these from the repository root.
 - `uv sync`
 - `uv run telekit --help`
 - `uv run telekit start-program --help`
-- `uv run pytest`
+- `uv run pytest -v`
 - `docker compose build`
 - `docker compose up -d`
 - `docker compose logs --tail=200`

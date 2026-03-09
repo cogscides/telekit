@@ -146,7 +146,14 @@ class IngTranscribeCommand(Command):
             if arg in ("-f", "--format") and i + 1 < len(args):
                 self.format = args[i + 1]
             elif arg in ("-m", "--model") and i + 1 < len(args):
-                self.model = args[i + 1]
+                requested_model = args[i + 1]
+                self.model = VoiceJob.resolve_model(requested_model)
+                if self.model != requested_model:
+                    logging.warning(
+                        "Unsupported transcription model %s requested. Falling back to %s.",
+                        requested_model,
+                        self.model,
+                    )
             elif arg in ("-s", "--summarize"):
                 self.summarize = True
             elif arg in ("-c", "--chapters"):
