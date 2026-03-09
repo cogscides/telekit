@@ -19,3 +19,13 @@ services:
     volumes:
       - ./data:/app/data
       - ./jobs:/app/jobs
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "from pathlib import Path; import sys; cmd = Path('/proc/1/cmdline').read_text(); ok = 'telekit' in cmd and Path('/app/data').exists() and Path('/app/data/clients.json').exists(); sys.exit(0 if ok else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
